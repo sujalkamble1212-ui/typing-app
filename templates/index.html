@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Typing App</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Typing Speed Test</h1>
+
+    <div class="stats">
+        <span>⏱ <span id="time">30</span>s</span>
+        <span>⚡ <span id="wpm">0</span> WPM</span>
+        <span>🎯 <span id="accuracy">100</span>%</span>
+    </div>
+
+    <p id="text"></p>
+
+    <textarea id="input" placeholder="Start typing..." autofocus></textarea>
+
+    <button onclick="resetTest()">Restart</button>
+
+    <div id="result"></div>
+
+</div>
+
+<script>
+const texts = [
+    "Typing fast requires consistent practice and focus.",
+    "Developers improve by building real world projects.",
+    "Speed and accuracy both matter in typing tests.",
+    "JavaScript makes web applications interactive and dynamic."
+];
+
+let startTime = null;
+let timerInterval = null;
+let duration = 30;
+let testEnded = false;
+
+function loadText() {
+    let random = texts[Math.floor(Math.random() * texts.length)];
+    let container = document.getElementById("text");
+    container.innerHTML = "";
+
+    random.split("").forEach(char => {
+        let span = document.createElement("span");
+        span.innerText = char;
+        container.appendChild(span);
+    });
+}
+
+function startTest() {
+    if (startTime !== null || testEnded) return;
+
+    startTime = Date.now();
+
+    timerInterval = setInterval(() => {
+        let elapsed = (Date.now() - startTime) / 1000;
+        let remaining = Math.max(duration - elapsed, 0);
+
+        document.getElementById("time").innerText = Math.ceil(remaining);
+
+        if (remaining <= 0) {
+            stopTest();
+        }
+    }, 100);
+}
+
+function calculateStats() {
+    if (testEnded) return;
+
+    let inputBox = document.getElementById("input");
+    let input = inputBox.value;
+    let original = document.getElementById("text").innerText;
+
+    let inputWords = input.trim().split(/\s+/);
+    let originalWords = original.trim().split(/\s+/);
+
+    let correctWords = 0;
+
+    for (let i = 0; i < inputWords.length; i++) {
+        if (inputWords[i] === originalWords[i]) {
+            correctWords++;
+        }
+    }
+
+    let timeElapsed = (Date.now() - startTime) / 1000;
+
+    let wpm = Math.round((correctWords / timeElapsed) * 60) || 0;
+    let accuracy = inputWords.length > 0
+        ? Math.round((correctWords / inputWords.length) * 100)
+        : 100;
+
+    document.getElementById("wpm").innerText = wpm;
+    document.getElementById("accuracy").innerText = accuracy;
+
+    // Highlight characters
+    let spans = document.querySelectorAll("#text span");
+    spans.forEach((span, i) => {
+        let char = input[i];
+        if (char == null) {
+            span.classList.remove("correct", "wrong");
+        } else if (char === span.innerText) {
+            span.classList.add("correct");
+            span.classList.remove("wrong");
+        } else {
+            span.classList.add("wrong");
+            span.classList.remove("correct");
+        }
+    });
+
+    // ✅ FIXED FINISH CONDITION (length-based)
+    if (input.length >= original.length) {
+        inputBox.value = original; // lock text length
+        stopTest(correctWords, wpm, accuracy);
+    }
+}
+
+function stopTest(correctWords = null, wpm = null, accuracy = null) {
+    if (testEnded) return;
+
+    testEnded = true;
+    clearInterval(timerInterval);
+
+    let inputBox = document.getElementById("input");
+    inputBox.disabled = true;
+    inputBox.blur();
+
+    // calculate if timer ended
+    if (correctWords === null) {
+        let input = inputBox.value.trim();
+        let original = document.getElementById("text").innerText.trim();
+
+        let inputWords = input.split(/\s+/);
+        let originalWords = original.split(/\s+/);
+
+        correctWords = 0;
+
+        for (let i = 0; i < inputWords.length; i++) {
+            if (inputWords[i] === originalWords[i]) {
+                correctWords++;
+            }
+        }
+
+        let timeElapsed = (Date.now() - startTime) / 1000;
+
+        wpm = Math.round((correctWords / timeElapsed) * 60) || 0;
+        accuracy = inputWords.length > 0
+            ? Math.round((correctWords / inputWords.length) * 100)
+            : 0;
+    }
+
+    document.getElementById("result").innerHTML = `
+        <div class="card">
+            <h3>🎉 Test Completed</h3>
+            <p>⚡ WPM: <b>${wpm}</b></p>
+            <p>🎯 Accuracy: <b>${accuracy}%</b></p>
+            <p>✅ Correct Words: <b>${correctWords}</b></p>
+        </div>
+    `;
+}
+
+document.getElementById("input").addEventListener("input", () => {
+    startTest();
+    calculateStats();
+});
+
+function resetTest() {
+    clearInterval(timerInterval);
+
+    startTime = null;
+    testEnded = false;
+
+    let inputBox = document.getElementById("input");
+    inputBox.disabled = false;
+    inputBox.value = "";
+
+    document.getElementById("wpm").innerText = 0;
+    document.getElementById("accuracy").innerText = 100;
+    document.getElementById("time").innerText = duration;
+    document.getElementById("result").innerHTML = "";
+
+    loadText();
+}
+
+loadText();
+</script>
+
+</body>
+</html>
